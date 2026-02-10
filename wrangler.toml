@@ -1,0 +1,14 @@
+name = "notes-cf"
+main = "build/index.js"
+compatibility_date = "2026-02-09"
+
+[build]
+command = "cargo leptos build --release && worker-build --release --features ssr && workflows-build"
+
+[assets]
+directory = "./target/site"
+
+[[workflows]]
+name = "parse-workflow"
+binding = "PARSEWORKFLOW"
+class_name = "ParseWorkflow"

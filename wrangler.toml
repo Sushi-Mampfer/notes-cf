@@ -12,3 +12,6 @@ directory = "./target/site"
 name = "parse-workflow"
 binding = "PARSEWORKFLOW"
 class_name = "ParseWorkflow"
+
+[ai]
+binding = "AI"

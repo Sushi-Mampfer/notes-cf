@@ -12,7 +12,6 @@ async fn fetch(
     _ctx: worker::Context,
 ) -> worker::Result<axum::http::Response<axum::body::Body>> {
     use std::sync::Arc;
-    pub use workflows::*;
 
     use axum::{Extension, Router};
     use leptos::prelude::*;

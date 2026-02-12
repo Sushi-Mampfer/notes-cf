@@ -13,5 +13,13 @@ name = "parse-workflow"
 binding = "PARSEWORKFLOW"
 class_name = "ParseWorkflow"
 
+[[r2_buckets]]
+bucket_name = "notes"
+binding = "NOTES"
+
 [ai]
 binding = "AI"
+
+[[kv_namespaces]]
+binding = "NOTESKV"
+id = "7320d17702c44dab80beeb12cec0a1c0"

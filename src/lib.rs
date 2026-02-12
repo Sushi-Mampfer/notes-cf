@@ -2,7 +2,15 @@ mod api;
 mod app;
 mod components;
 #[cfg(feature = "ssr")]
+mod upload;
+#[cfg(feature = "ssr")]
 mod workflows;
+
+#[cfg(feature = "ssr")]
+#[derive(Clone)]
+pub struct AppState {
+    pub env: worker::Env,
+}
 
 #[cfg(feature = "ssr")]
 #[worker::event(fetch)]
@@ -26,6 +34,7 @@ async fn fetch(
 
     // build our application with a route
     let mut router = Router::new()
+        .with_state(AppState { env: env.clone() })
         .leptos_routes(&leptos_options, routes, {
             let leptos_options = leptos_options.clone();
             move || shell(leptos_options.clone())

@@ -34,6 +34,7 @@ worker = { version = "0.7.4", features = [
 ], optional = true }
 workflows-rs = { git = "https://github.com/Sushi-Mampfer/workflows-rs", optional = true }
 futures-util = "0.3.31"
+base64 = "0.22.1"
 
 [features]
 hydrate = ["leptos/hydrate"]

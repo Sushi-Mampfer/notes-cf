@@ -1,17 +1,24 @@
+#![cfg(feature = "ssr")]
 mod api;
 mod app;
 mod components;
-#[cfg(feature = "ssr")]
 mod upload;
-#[cfg(feature = "ssr")]
 mod workflows;
+
 use axum::extract::FromRef;
-#[cfg(feature = "ssr")]
 use leptos::config::LeptosOptions;
-#[cfg(feature = "ssr")]
+use std::sync::Arc;
 pub use workflows::*;
 
-#[cfg(feature = "ssr")]
+use axum::{routing::post, Extension, Router};
+use leptos::prelude::*;
+use leptos_axum::{generate_route_list, LeptosRoutes};
+use tower_service::Service;
+
+use app::{shell, App};
+
+use crate::upload::upload;
+
 #[derive(FromRef, Clone)]
 pub struct AppState {
     pub leptos_options: LeptosOptions,
@@ -25,21 +32,15 @@ async fn fetch(
     env: worker::Env,
     _ctx: worker::Context,
 ) -> worker::Result<axum::http::Response<axum::body::Body>> {
-    use std::sync::Arc;
-
-    use axum::{Extension, Router, routing::post};
-    use leptos::prelude::*;
-    use leptos_axum::{generate_route_list, LeptosRoutes};
-    use tower_service::Service;
-
-    use app::{shell, App};
-
-    use crate::upload::upload;
+    use axum::extract::DefaultBodyLimit;
 
     let conf = get_configuration(None).unwrap();
     let leptos_options = conf.leptos_options;
     let routes = generate_route_list(App);
-    let state = AppState{ leptos_options: leptos_options.clone(), env: env.clone() };
+    let state = AppState {
+        leptos_options: leptos_options.clone(),
+        env: env.clone(),
+    };
 
     // build our application with a route
     let mut router = Router::new()
@@ -49,7 +50,8 @@ async fn fetch(
             move || shell(leptos_options.clone())
         })
         .with_state(state)
-        .layer(Extension(Arc::new(env))); // <- Allow leptos server functions to access Worker stuff
+        .layer(Extension(Arc::new(env))) // <- Allow leptos server functions to access Worker stuff
+        .layer(DefaultBodyLimit::disable());
 
     Ok(router.call(req).await?)
 }

@@ -2,6 +2,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 use worker::console_error;
+use worker::console_log;
 use worker::wasm_bindgen_futures;
 use worker::Env;
 use workflows_rs::{from_value, WorkflowEvent, WorkflowStep};
@@ -9,12 +10,18 @@ use workflows_rs::{from_value, WorkflowEvent, WorkflowStep};
 #[derive(Deserialize, Clone)]
 struct Input {
     pub id: String,
-    pub audio: String,
 }
 
 #[derive(Serialize)]
 struct WhisperInput {
-    pub audio: String,
+    audio: AudioField,
+}
+
+#[derive(Serialize)]
+#[serde(untagged)]
+enum AudioField {
+    Base64(String),
+    Raw { body: Vec<u8>, contentType: String },
 }
 
 #[derive(Deserialize)]
@@ -52,13 +59,27 @@ impl ParseWorkflow {
 
     pub async fn run(&self, event: JsValue, step: WorkflowStep) -> Result<String, JsValue> {
         let event: WorkflowEvent<Input> = from_value(event).unwrap();
-        let payload = event.payload.clone();
+
         let env = self.env.clone();
+        let payload = event.payload.clone();
         let transcription = step
             .exec("transcribe", None, move || {
                 let env = env.clone();
                 let payload = payload.clone();
                 async move {
+                    let audio = env
+                        .bucket("NOTES")
+                        .map_err(|_| "Failed to get bucket.".to_string())?
+                        .get(format!("raw/{}", payload.id))
+                        .execute()
+                        .await
+                        .map_err(|_| "Failed to get raw.".to_string())?
+                        .ok_or("Failed to find raw.".to_string())?
+                        .body()
+                        .ok_or("Failed to get raw body.".to_string())?
+                        .bytes()
+                        .await
+                        .map_err(|_| "Failed to convert raw to bytes.".to_string())?;
                     let ai = env
                         .ai("AI")
                         .map_err(|_| "Failed to get AI binding.".to_string())?;
@@ -66,7 +87,10 @@ impl ParseWorkflow {
                         .run::<WhisperInput, WhisperOutput>(
                             "@cf/openai/whisper-large-v3-turbo",
                             WhisperInput {
-                                audio: payload.audio,
+                                audio: AudioField::Raw {
+                                    body: audio,
+                                    contentType: "audio/wav".into(),
+                                },
                             },
                         )
                         .await
@@ -194,7 +218,7 @@ impl ParseWorkflow {
                 }
             })
             .await;
-
+        console_log!("Finished!");
         Ok("hi".to_string())
     }
 }

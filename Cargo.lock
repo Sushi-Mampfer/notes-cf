@@ -1184,6 +1184,8 @@ dependencies = [
  "leptos_axum",
  "leptos_meta",
  "leptos_router",
+ "memchr",
+ "regex",
  "serde",
  "tower-service",
  "wasm-bindgen",

@@ -142,6 +142,18 @@ impl ParseWorkflow {
                         header
                             .seek(SeekFrom::Current(size as i64))
                             .map_err(|_| "Failed to move seeker.".to_string())?;
+                        loop {
+                            let mut peek = [0u8; 1];
+                            if header.read_exact(&mut peek).is_err() {
+                                break;
+                            }
+                            if peek[0] != 0x00 {
+                                header
+                                    .seek(SeekFrom::Current(-1))
+                                    .map_err(|_| "Failed to move seeker.".to_string())?;
+                                break;
+                            }
+                        }
                     };
 
                     let mut headers = vec![0u8; offset as usize];

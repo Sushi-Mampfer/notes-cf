@@ -50,7 +50,6 @@ ssr = [
 ]
 
 [package.metadata.leptos]
-wasm-validation = false
 # The name used by wasm-bindgen/cargo-leptos for the JS/WASM bundle. Defaults to the crate name
 output-name = "notes-cf"
 

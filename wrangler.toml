@@ -8,6 +8,21 @@ command = "cargo leptos build --release && worker-build --release --features ssr
 [assets]
 directory = "./target/site"
 
+[observability]
+enabled = false
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[observability.traces]
+enabled = false
+persist = true
+head_sampling_rate = 1
+
 [[workflows]]
 name = "parse-workflow"
 binding = "PARSEWORKFLOW"

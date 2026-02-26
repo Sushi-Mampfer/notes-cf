@@ -3,7 +3,7 @@ main = "build/index.js"
 compatibility_date = "2026-02-09"
 
 [build]
-command = "cargo leptos build --release && cargo install -q \"worker-build@^0.7\" && LEPTOS_OUTPUT_NAME=notes-cf worker-build --release --features ssr && workflows-build"
+command = "cargo leptos build --release && worker-build --release --features ssr && workflows-build"
 
 [assets]
 directory = "./target/site"

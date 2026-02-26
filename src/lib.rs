@@ -1,24 +1,37 @@
-#![cfg(feature = "ssr")]
-mod api;
 mod app;
 mod components;
+mod get_data;
+#[cfg(feature = "ssr")]
 mod upload;
+#[cfg(feature = "ssr")]
 mod workflows;
 
+#[cfg(feature = "ssr")]
 use axum::extract::FromRef;
+#[cfg(feature = "ssr")]
 use leptos::config::LeptosOptions;
+#[cfg(feature = "ssr")]
 use std::sync::Arc;
+#[cfg(feature = "ssr")]
 pub use workflows::*;
 
+#[cfg(feature = "ssr")]
 use axum::{routing::post, Extension, Router};
+#[cfg(feature = "ssr")]
 use leptos::prelude::*;
+#[cfg(feature = "ssr")]
 use leptos_axum::{generate_route_list, LeptosRoutes};
+#[cfg(feature = "ssr")]
 use tower_service::Service;
 
-use app::{shell, App};
+#[cfg(feature = "ssr")]
+use app::shell;
+use app::App;
 
+#[cfg(feature = "ssr")]
 use crate::upload::upload;
 
+#[cfg(feature = "ssr")]
 #[derive(FromRef, Clone)]
 pub struct AppState {
     pub leptos_options: LeptosOptions,

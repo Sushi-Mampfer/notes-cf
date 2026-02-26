@@ -24,20 +24,14 @@ struct Headers {
     headers: Vec<u8>,
     offset: u64,
     size: u64,
+    data_size_pos: u64,
     num_channels: u16,
     bits_per_sample: u16,
 }
 
 #[derive(Serialize)]
 struct WhisperInput {
-    audio: AudioField,
-}
-
-#[derive(Serialize)]
-#[serde(untagged)]
-enum AudioField {
-    Base64(String),
-    Raw { body: Vec<u8>, contentType: String },
+    audio: Vec<u8>,
 }
 
 #[derive(Deserialize)]
@@ -115,12 +109,12 @@ impl ParseWorkflow {
                     let mut num_channels = 0;
                     let mut bits_per_sample = 0;
 
-                    let (offset, size) = loop {
+                    let (data_size_pos, offset, size) = loop {
                         let mut id = [0u8; 4];
                         let mut size_buf = [0u8; 4];
                         header
                             .read_exact(&mut id)
-                            .map_err(|_| "Failed to read id.".to_string())?;
+                            .map_err(|e| format!("Failed to read id: {}", e.to_string()))?;
                         header
                             .read_exact(&mut size_buf)
                             .map_err(|_| "Failed to read size.".to_string())?;
@@ -131,13 +125,27 @@ impl ParseWorkflow {
                             header
                                 .read_exact(&mut fmt)
                                 .map_err(|_| "Failed to get fmt chunk.".to_string())?;
+                            let audio_format = u16::from_le_bytes([fmt[0], fmt[1]]);
+                            if audio_format != 1 {
+                                return Err("Only PCM WAV is supported".to_string());
+                            }
                             num_channels = u16::from_le_bytes([fmt[2], fmt[3]]);
                             bits_per_sample = u16::from_le_bytes([fmt[14], fmt[15]]);
+                            if size % 2 != 0 {
+                                header
+                                    .seek(SeekFrom::Current(1))
+                                    .map_err(|_| "Failed to skip fmt padding.".to_string())?;
+                            }
+                            continue;
                         } else if &id == b"data" {
                             let data_offset = header
                                 .stream_position()
                                 .map_err(|_| "Failed to get offset.".to_string())?;
-                            break (data_offset, size);
+                            let size_pos = header
+                                .stream_position()
+                                .map_err(|_| "Failed to get stram position.".to_string())?
+                                - 4;
+                            break (size_pos, data_offset, size);
                         }
                         header
                             .seek(SeekFrom::Current(size as i64))
@@ -170,6 +178,7 @@ impl ParseWorkflow {
                         size,
                         num_channels,
                         bits_per_sample,
+                        data_size_pos,
                     })
                 }
             })
@@ -181,19 +190,27 @@ impl ParseWorkflow {
         };
 
         let frame_size = (headers.bits_per_sample as u64 / 8) * headers.num_channels as u64;
-        let audio_per_chunk = (29 * 1024 * 1024 - headers.offset) / frame_size * frame_size;
+        let max_audio_bytes =
+            60 * 16000 * (headers.bits_per_sample as u64 / 8) * headers.num_channels as u64;
+        let audio_per_chunk = (max_audio_bytes / frame_size) * frame_size;
         let num_chunks = headers.size.div_ceil(audio_per_chunk);
         let mut transcript = String::new();
 
         for i in 0..num_chunks {
-            let bytes_to_read = audio_per_chunk.min(headers.size - i * audio_per_chunk);
+            let mut bytes_to_read = audio_per_chunk.min(headers.size - i * audio_per_chunk);
+            bytes_to_read -= bytes_to_read % frame_size;
+            if bytes_to_read == 0 {
+                return Ok(String::new());
+            }
+
             let offset = headers.offset;
+            let data_size_pos = headers.data_size_pos;
             let header = headers.headers.clone();
 
             let env = self.env.clone();
             let payload = event.payload.clone();
             let transcription = step
-                .exec("transcribe", None, move || {
+                .exec(format!("transcribe {}", i), None, move || {
                     let env = env.clone();
                     let payload = payload.clone();
                     let mut header = header.clone();
@@ -216,12 +233,15 @@ impl ParseWorkflow {
                             .await
                             .map_err(|_| "Failed to convert raw to bytes.".to_string())?;
 
-                        let riff_size = (4 + (offset as usize - 8) + 8 + audio.len()) as u32;
+                        let total_len = header.len() + audio.len();
+                        let riff_size = (total_len - 8) as u32;
                         header[4..8].copy_from_slice(&riff_size.to_le_bytes());
 
-                        let data_size_offset = offset as usize - 4;
-                        header[data_size_offset..offset as usize]
-                            .copy_from_slice(&(audio.len() as u32).to_le_bytes());
+                        let pos = data_size_pos as usize;
+                        if pos + 4 <= header.len() {
+                            header[pos..pos + 4]
+                                .copy_from_slice(&(audio.len() as u32).to_le_bytes());
+                        }
 
                         header.append(&mut audio);
 
@@ -230,13 +250,8 @@ impl ParseWorkflow {
                             .map_err(|_| "Failed to get AI binding.".to_string())?;
                         match ai
                             .run::<WhisperInput, WhisperOutput>(
-                                "@cf/openai/whisper-large-v3-turbo",
-                                WhisperInput {
-                                    audio: AudioField::Raw {
-                                        body: header,
-                                        contentType: "audio/wav".into(),
-                                    },
-                                },
+                                "@cf/openai/whisper",
+                                WhisperInput { audio: header },
                             )
                             .await
                         {
@@ -279,8 +294,8 @@ impl ParseWorkflow {
                     {
                         Ok(cleaned) => Ok(cleaned.response),
                         Err(e) => {
-                            console_error!("Failed to summarize audiofile {}.", e);
-                            Err("Failed to summarize audiofile.".to_string())
+                            console_error!("Failed to clean audiofile {}.", e);
+                            Err("Failed to clean audiofile.".to_string())
                         }
                     }
                 }
@@ -290,11 +305,14 @@ impl ParseWorkflow {
             Ok(t) => t,
             Err(e) => {
                 return Err(JsValue::from_str(&format!(
-                    "Failed to transcribe audiofile: {}",
+                    "Failed to clean audiofile: {}",
                     e
                 )))
             }
         };
+
+        console_error!("{}", &cleaned);
+
         let env = self.env.clone();
         let payload = event.payload.clone();
         let cleaned_pass = cleaned.clone();
@@ -343,7 +361,7 @@ impl ParseWorkflow {
             Ok(t) => t,
             Err(e) => {
                 return Err(JsValue::from_str(&format!(
-                    "Failed to transcribe audiofile: {}",
+                    "Failed to summarize audiofile: {}",
                     e
                 )))
             }

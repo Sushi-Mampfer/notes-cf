@@ -60,7 +60,7 @@ fn HomePage() -> impl IntoView {
     });
 
     view! {
-        <div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+        <div class="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 p-6">
             <div class="max-w-2xl mx-auto">
                 <h1 class="text-4xl font-bold text-slate-900 mb-8">My Notes</h1>
 
@@ -115,7 +115,7 @@ fn NoteCard(note: Note) -> impl IntoView {
         <div class="p-5">
             <div class="flex items-center justify-between">
                 <h2 class="text-xl font-semibold text-slate-900 flex-1 pr-3">{note.title.clone()}</h2>
-                <span class="text-2xl text-slate-400 flex-shrink-0">
+                <span class="text-2xl text-slate-400 shrink-0">
                     {move || if expanded.get() { "▼" } else { "▶" }}
                 </span>
             </div>

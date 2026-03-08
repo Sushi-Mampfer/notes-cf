@@ -18,22 +18,22 @@ axum = { version = "0.8.8", features = [
   "macros",
 ], default-features = false, optional = true }
 getrandom = { version = "0.3", features = ["wasm_js"] }
-leptos = { version = "0.8.15" }
-leptos_axum = { version = "0.8.7", default-features = false, features = [
+leptos = { version = "0.8.17" }
+leptos_axum = { version = "0.8.8", default-features = false, features = [
   "wasm",
 ], optional = true }
-leptos_meta = { version = "0.8.5" }
-leptos_router = { version = "0.8.11" }
+leptos_meta = { version = "0.8.6" }
+leptos_router = { version = "0.8.12" }
 serde = { version = "1.0.228", features = ["derive"] }
 tower-service = "0.3.3"
-wasm-bindgen = "0.2.108"
-worker = { version = "0.7.4", features = [
+wasm-bindgen = "0.2.114"
+worker = { version = "0.7.5", features = [
   "http",
   "axum",
   "d1",
 ], optional = true }
 workflows-rs = { git = "https://github.com/Sushi-Mampfer/workflows-rs", optional = true }
-futures-util = "0.3.31"
+futures-util = "0.3.32"
 base64 = "0.22.1"
 regex = "1.12.3"
 memchr = "2.8.0"

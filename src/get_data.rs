@@ -1,11 +1,9 @@
-#[cfg(feature = "ssr")]
+#![cfg(feature = "ssr")]
 use axum::Extension;
 use leptos::prelude::*;
-#[cfg(feature = "ssr")]
 use leptos_axum::extract;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-#[cfg(feature = "ssr")]
 use worker::Env;
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -15,7 +13,7 @@ pub struct Note {
     pub summary: String,
 }
 
-#[cfg_attr(feature = "ssr", worker::send)]
+#[worker::send]
 #[server]
 pub async fn get_data() -> Result<Vec<Note>, ServerFnError> {
     let Extension(env): Extension<Arc<Env>> = extract().await.unwrap();

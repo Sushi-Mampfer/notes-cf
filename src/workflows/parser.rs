@@ -270,7 +270,7 @@ impl ParseWorkflow {
                     return Err(JsValue::from_str(&format!(
                         "Failed to transcribe audiofile: {}",
                         e
-                    )))
+                    )));
                 }
             };
             transcript.push_str(&tmp);
@@ -307,7 +307,7 @@ impl ParseWorkflow {
                 return Err(JsValue::from_str(&format!(
                     "Failed to clean audiofile: {}",
                     e
-                )))
+                )));
             }
         };
 
@@ -363,7 +363,7 @@ impl ParseWorkflow {
                 return Err(JsValue::from_str(&format!(
                     "Failed to summarize audiofile: {}",
                     e
-                )))
+                )));
             }
         };
         let env = self.env.clone();

@@ -1190,9 +1190,9 @@ name = "notes-cf"
 version = "0.1.0"
 dependencies = [
  "axum",
- "base64",
  "futures-util",
  "getrandom 0.3.4",
+ "getrandom 0.4.2",
  "leptos",
  "leptos_axum",
  "leptos_meta",
